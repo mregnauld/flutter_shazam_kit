@@ -100,14 +100,16 @@ extension SwiftFlutterShazamKitPlugin{
         // Ask the user for permission to use the mic if required then start the engine.
         try audioSession.setCategory(.playAndRecord)
         audioSession.requestRecordPermission { [weak self] success in
-            guard success else {
-                self?.callbackChannel?.invokeMethod("didHasError", arguments: "Recording permission not found, please allow permission first and then try again")
-                return
-            }
-            do{
-                try self?.audioEngine.start()
-            }catch{
-                self?.callbackChannel?.invokeMethod("didHasError", arguments: "Can't start the audio engine")
+            DispatchQueue.main.async {
+                guard success else {
+                    self?.callbackChannel?.invokeMethod("didHasError", arguments: "Recording permission not found, please allow permission first and then try again")
+                    return
+                }
+                do{
+                    try self?.audioEngine.start()
+                }catch{
+                    self?.callbackChannel?.invokeMethod("didHasError", arguments: "Can't start the audio engine")
+                }
             }
         }
         result(nil)
@@ -149,18 +151,22 @@ extension SwiftFlutterShazamKitPlugin: SHSessionDelegate{
             item["isrc"] = rawItem.isrc
             mediaItems.append(item)
         }
-        do{
-            let jsonData = try JSONSerialization.data(withJSONObject: mediaItems)
-            let jsonString = String(data: jsonData, encoding: .utf8)
-            self.callbackChannel?.invokeMethod("matchFound", arguments: jsonString)
-        }catch{
-            callbackChannel?.invokeMethod("didHasError", arguments: "Error when trying to format data, please try again")
+        DispatchQueue.main.async {
+            do{
+                let jsonData = try JSONSerialization.data(withJSONObject: mediaItems)
+                let jsonString = String(data: jsonData, encoding: .utf8)
+                self.callbackChannel?.invokeMethod("matchFound", arguments: jsonString)
+            }catch{
+                self.callbackChannel?.invokeMethod("didHasError", arguments: "Error when trying to format data, please try again")
+            }
         }
     }
     
     public func session(_ session: SHSession, didNotFindMatchFor signature: SHSignature, error: Error?) {
-        callbackChannel?.invokeMethod("notFound", arguments: nil)
-        callbackChannel?.invokeMethod("didHasError", arguments: error?.localizedDescription)
+        DispatchQueue.main.async {
+            self.callbackChannel?.invokeMethod("notFound", arguments: nil)
+            self.callbackChannel?.invokeMethod("didHasError", arguments: error?.localizedDescription)
+        }
     }
 }
 
